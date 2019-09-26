@@ -1,14 +1,9 @@
-import numpy as np
-import pandas as pd
-from numpy import matrix as m
-from pandas import DataFrame as df
-from scipy import linalg
-
-try:
-    import seaborn
-except:
-    pass
 from matplotlib.pylab import rcParams
+from pandas import DataFrame as df
+from numpy import matrix as m
+from scipy import linalg
+import pandas as pd
+import numpy as np
 
 rcParams["figure.figsize"] = 11, 4
 
@@ -64,7 +59,6 @@ class mySSA(object):
         mat = m(hankel_matrix)
         L, K = mat.shape
         L_star, K_star = min(L, K), max(L, K)
-        new = np.zeros((L, K))
         if L > K:
             mat = mat.T
         ret = []
@@ -297,10 +291,6 @@ class mySSA(object):
 
 
 if __name__ == "__main__":
-    from mySSA import mySSA
-    from pandas import DataFrame as df
-    import pandas as pd
-    import numpy as np
     from matplotlib.pylab import rcParams
 
     # Construct the data with gaps
