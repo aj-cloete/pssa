@@ -273,7 +273,7 @@ class mySSA(object):
                     self.ts_forecast = np.append(
                         self.ts_forecast, self.ts_v[i]
                     )
-            except (IndexError):
+            except Exception:
                 x = self.R.T * m(self.ts_forecast[i - self.R.shape[0] : i]).T
                 self.ts_forecast = np.append(self.ts_forecast, x[0])
         self.forecast_N = i + 1
