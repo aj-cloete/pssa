@@ -149,8 +149,10 @@ class mySSA(object):
         self.orthon_base = {i: self.U[:, i] for i in range(self.r)}
 
         if verbose:
-            msg1 = """Rank of trajectory\t\t: {}\n
-            Dimension of projection space\t: {}"""
+            msg1 = (
+                "Rank of trajectory\t\t: {}\n"
+                "Dimension of projection space\t: {}"
+            )
             msg1 = msg1.format(self.d, self.r)
             msg2 = "Characteristic of projection\t: {}".format(
                 self.r_characteristic
