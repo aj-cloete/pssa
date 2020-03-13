@@ -9,6 +9,10 @@ verify_ssl = true
 pandas = "*"
 scipy = "*"
 numpy = "*"
+ipykernel = "*"
+matplotlib = "*"
+seaborn = "*"
+pre-commit = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.8.1"
