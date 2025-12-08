@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from numpy import matrix as m
+from numpy import array as m
 from pandas import DataFrame as df
 from scipy import linalg
 try:
@@ -55,7 +55,7 @@ class mySSA(object):
     def diagonal_averaging(hankel_matrix):
         '''Performs anti-diagonal averaging from given hankel matrix
         Returns: Pandas DataFrame object containing the reconstructed series'''
-        mat = m(hankel_matrix)
+        mat = np.array(hankel_matrix)
         L, K = mat.shape
         L_star, K_star = min(L,K), max(L,K)
         new = np.zeros((L,K))
@@ -67,7 +67,7 @@ class mySSA(object):
         for k in range(1-K_star, L_star):
             mask = np.eye(K_star, k=k, dtype='bool')[::-1][:L_star,:]
             mask_n = sum(sum(mask))
-            ma = np.ma.masked_array(mat.A, mask=1-mask)
+            ma = np.ma.masked_array(mat, mask=1-mask)
             ret+=[ma.sum()/mask_n]
         
         return df(ret).rename(columns={0:'Reconstruction'})
@@ -88,12 +88,12 @@ class mySSA(object):
             self.embedding_dimension = (self.embedding_dimension//self.suspected_frequency)*self.suspected_frequency
     
         self.K = self.ts_N-self.embedding_dimension+1
-        self.X = m(linalg.hankel(self.ts, np.zeros(self.embedding_dimension))).T[:,:self.K]
+        self.X = np.array(linalg.hankel(self.ts, np.zeros(self.embedding_dimension))).T[:,:self.K]
         self.X_df = df(self.X)
         self.X_complete = self.X_df.dropna(axis=1)
-        self.X_com = m(self.X_complete.values)
+        self.X_com = np.array(self.X_complete.values)
         self.X_missing = self.X_df.drop(self.X_complete.columns, axis=1)
-        self.X_miss = m(self.X_missing.values)
+        self.X_miss = np.array(self.X_missing.values)
         self.trajectory_dimentions = self.X_df.shape
         self.complete_dimensions = self.X_complete.shape
         self.missing_dimensions = self.X_missing.shape
@@ -113,16 +113,16 @@ class mySSA(object):
         '''Perform the Singular Value Decomposition and identify the rank of the embedding subspace
         Characteristic of projection: the proportion of variance captured in the subspace'''
         X = self.X_com
-        self.S = X*X.T
+        self.S = X @ X.T
         self.U, self.s, self.V = linalg.svd(self.S)
-        self.U, self.s, self.V = m(self.U), np.sqrt(self.s), m(self.V)
+        self.U, self.s, self.V = np.array(self.U), np.sqrt(self.s), np.array(self.V)
         self.d = np.linalg.matrix_rank(X)
         Vs, Xs, Ys, Zs = {}, {}, {}, {}
         for i in range(self.d):
-            Zs[i] = self.s[i]*self.V[:,i]
-            Vs[i] = X.T*(self.U[:,i]/self.s[i])
-            Ys[i] = self.s[i]*self.U[:,i]
-            Xs[i] = Ys[i]*(m(Vs[i]).T)
+            Zs[i] = self.s[i] * self.V[:,i]
+            Vs[i] = X.T @ (self.U[:,i] / self.s[i])
+            Ys[i] = self.s[i] * self.U[:,i]
+            Xs[i] = np.outer(Ys[i], Vs[i])
         self.Vs, self.Xs = Vs, Xs
         self.s_contributions = self.get_contributions(X, self.s, False)
         self.r = len(self.s_contributions[self.s_contributions>0])
@@ -159,7 +159,7 @@ class mySSA(object):
         '''Visualise the reconstruction of the hankel matrix/matrices passed to *hankel'''
         hankel_mat = None
         for han in hankel:
-            if isinstance(hankel_mat,m):
+            if isinstance(hankel_mat,np.ndarray):
                 hankel_mat = hankel_mat + han
             else: 
                 hankel_mat = han.copy()
@@ -193,11 +193,11 @@ class mySSA(object):
             self.forecast_orthonormal_base = self.orthonormal_base
         self.R = np.zeros(self.forecast_orthonormal_base[0].shape)[:-1]
         for Pi in self.forecast_orthonormal_base.values():
-            self.X_com_hat += Pi*Pi.T*self.X_com
+            self.X_com_hat += np.outer(Pi, Pi) @ self.X_com
             pi = np.ravel(Pi)[-1]
             self.verticality_coefficient += pi**2
-            self.R += pi*Pi[:-1]
-        self.R = m(self.R/(1-self.verticality_coefficient))
+            self.R += pi * Pi[:-1]
+        self.R = self.R / (1 - self.verticality_coefficient)
         self.X_com_tilde = self.diagonal_averaging(self.X_com_hat)
         
     def forecast_recurrent(self, steps_ahead=12, singular_values=None, plot=False, return_df=False, **plotargs):
@@ -211,13 +211,13 @@ class mySSA(object):
         for i in range(1, self.ts_N+steps_ahead):
             try:
                 if np.isnan(self.ts_v[i]):
-                    x = self.R.T*m(self.ts_forecast[max(0,i-self.R.shape[0]): i]).T
-                    self.ts_forecast = np.append(self.ts_forecast,x[0])
+                    x = self.R.T @ self.ts_forecast[max(0,i-self.R.shape[0]): i]
+                    self.ts_forecast = np.append(self.ts_forecast,x)
                 else:
                     self.ts_forecast = np.append(self.ts_forecast,self.ts_v[i])
             except(IndexError):
-                x = self.R.T*m(self.ts_forecast[i-self.R.shape[0]: i]).T
-                self.ts_forecast = np.append(self.ts_forecast, x[0])
+                x = self.R.T @ self.ts_forecast[i-self.R.shape[0]: i]
+                self.ts_forecast = np.append(self.ts_forecast, x)
         self.forecast_N = i+1
         new_index = pd.date_range(start=self.ts.index.min(),periods=self.forecast_N, freq=self.freq)
         forecast_df = df(self.ts_forecast, columns=['Forecast'], index=new_index)
